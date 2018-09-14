@@ -78,8 +78,30 @@ module Graphiti
         ::Rails.application.config.cache_classes
     end
 
+    # def configure_endpoint_lookup
+    #   Graphiti.config.context_for_endpoint = ->(path, action) {
+    #     method = :GET
+    #     case action
+    #       when :show then path = "#{path}/1"
+    #       when :create then method = :POST
+    #       when :update
+    #         path = "#{path}/1"
+    #         method = :PUT
+    #       when :destroy
+    #         path = "#{path}/1"
+    #         method = :DELETE
+    #     end
+    #
+    #     route = ::Rails.application.routes.recognize_path(path, method: method) rescue nil
+    #     "#{route[:controller]}_controller".classify.safe_constantize if route
+    #   }
+    # end
+
+    #TODO - create PR for these changes
     def configure_endpoint_lookup
       Graphiti.config.context_for_endpoint = ->(path, action) {
+        # remove our engine namespace
+        path = path.to_s.gsub(/^\/?api/, '')
         method = :GET
         case action
           when :show then path = "#{path}/1"
@@ -91,8 +113,8 @@ module Graphiti
             path = "#{path}/1"
             method = :DELETE
         end
-
-        route = ::Rails.application.routes.recognize_path(path, method: method) rescue nil
+        # obtain route from API engine rather than app - not available from app
+        route = Api::Engine.routes.recognize_path(path, method: method) rescue nil
         "#{route[:controller]}_controller".classify.safe_constantize if route
       }
     end
