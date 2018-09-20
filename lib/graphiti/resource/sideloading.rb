@@ -17,9 +17,13 @@ module Graphiti
             parent.children[name] = sideload
           else
             config[:sideloads][name] = sideload
-            apply_sideloads_to_serializer if rails_autoloading?
+            apply_sideload_to_serializer(name) if eagerly_apply_sideload?(sideload)
           end
           sideload
+        end
+
+        def apply_sideload_to_serializer(name)
+          Util::SerializerRelationships.new(self, config[:sideloads].slice(name)).apply
         end
 
         def apply_sideloads_to_serializer
@@ -27,22 +31,22 @@ module Graphiti
         end
 
         def has_many(name, opts = {}, &blk)
-          opts[:class] = adapter.sideloading_classes[:has_many]
+          opts[:class] ||= adapter.sideloading_classes[:has_many]
           allow_sideload(name, opts, &blk)
         end
 
         def belongs_to(name, opts = {}, &blk)
-          opts[:class] = adapter.sideloading_classes[:belongs_to]
+          opts[:class] ||= adapter.sideloading_classes[:belongs_to]
           allow_sideload(name, opts, &blk)
         end
 
         def has_one(name, opts = {}, &blk)
-          opts[:class] = adapter.sideloading_classes[:has_one]
+          opts[:class] ||= adapter.sideloading_classes[:has_one]
           allow_sideload(name, opts, &blk)
         end
 
         def many_to_many(name, opts = {}, &blk)
-          opts[:class] = adapter.sideloading_classes[:many_to_many]
+          opts[:class] ||= adapter.sideloading_classes[:many_to_many]
           allow_sideload(name, opts, &blk)
         end
 
@@ -105,8 +109,14 @@ module Graphiti
           memo
         end
 
-        def rails_autoloading?
-          defined?(::Rails) && !::Rails.application.config.eager_load
+        # If eager loading, ensure routes are loaded first, then apply
+        # This happens in Railtie
+        def eagerly_apply_sideload?(sideload)
+          if defined?(::Rails)
+            ::Rails.application.config.eager_load ? false : true
+          else
+            sideload.resource_class_loaded?
+          end
         end
       end
     end

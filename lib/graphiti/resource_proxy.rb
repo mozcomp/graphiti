@@ -78,6 +78,9 @@ module Graphiti
     end
 
     def save(action: :create)
+      # TODO: remove this. Only used for persisting many-to-many with AR
+      # (see activerecord adapter)
+      Graphiti.context[:namespace] = action
       validator = persist do
         @resource.persist_with_relationships \
           @payload.meta(action: action),
@@ -89,8 +92,9 @@ module Graphiti
     end
 
     def destroy
+      record = data
       validator = @resource.transaction do
-        model = @resource.destroy(@query.filters[:id])
+        model = @resource.destroy(record)
         model.instance_variable_set(:@__serializer_klass, @resource.serializer)
         validator = ::Graphiti::Util::ValidationResponse.new \
           model, @payload
